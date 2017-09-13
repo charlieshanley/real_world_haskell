@@ -11,6 +11,11 @@ import System.Environment (getArgs)
 import qualified Data.ByteString.Lazy.Char8 as L
 import qualified Data.Map as M
 
+type Pixel = Word8
+type RGB = (Pixel, Pixel, Pixel)
+
+type Pixmap = Array (Int, Int) RGB
+
 
 leftOddList = ["0001101", "0011001", "0010011", "0111101", "0100011",
                "0110001", "0101111", "0111011", "0110111", "0001011"]
@@ -44,3 +49,27 @@ foldA f s a = go s (indices a)
 -- Strict left fold using first element of the array as init, similar to foldl1 on lists
 foldA1 :: Ix k => (a -> a -> a) -> Array k a -> a
 foldA1 f a = foldA f (a ! fst (bounds a)) a
+
+encodeEAN13 :: String -> String
+encodeEAN13 = concat . encodeDigits . map digitToInt
+
+encodeDigits :: [Int] -> [String]
+encodeDigits s@(first:rest) =
+    outerGuard : lefties ++ centerGuard : righties ++ [outerGuard]
+    where (left, right) = splitAt 5 rest
+          lefties = zipWith leftEncode (parityCodes ! first) left
+          righties = map rightEncode (right ++ [checkDigit s])
+
+leftEncode :: Char -> Int -> String
+leftEncode '1' = (leftOddCodes !)
+
+rightEncode :: Int -> String
+rightEncode = (rightCodes !)
+
+outerGuard = "101"
+centerGuard = "01010"
+
+
+
+parseRawPPM :: Parse Pixmap
+parseRawPPM = parseWhileWith w2c (/= '\n') 
